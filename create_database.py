@@ -1,21 +1,19 @@
-# from langchain.document_loaders import DirectoryLoader
+import os
+import shutil
+from dotenv import load_dotenv
 from langchain_community.document_loaders import DirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
-# from langchain.embeddings import OpenAIEmbeddings
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
-import openai 
-from dotenv import load_dotenv
-import os
-import shutil
 
-# Load environment variables. Assumes that project contains .env file with API keys
+# Load environment variables from .env
 load_dotenv()
-#---- Set OpenAI API key 
-# Change environment variable name from "OPENAI_API_KEY" to the name given in 
-# your .env file.
-openai.api_key = os.environ['OPENAI_API_KEY']
+
+# Get API key from .env
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    raise ValueError("Error: OPENAI_API_KEY not found in .env file")
 
 CHROMA_PATH = "chroma"
 DATA_PATH = "data/books"
@@ -61,7 +59,7 @@ def save_to_chroma(chunks: list[Document]):
 
     # Create a new DB from the documents.
     db = Chroma.from_documents(
-        chunks, OpenAIEmbeddings(), persist_directory=CHROMA_PATH
+        chunks, OpenAIEmbeddings(openai_api_key=api_key), persist_directory=CHROMA_PATH
     )
     db.persist()
     print(f"Saved {len(chunks)} chunks to {CHROMA_PATH}.")

@@ -1,9 +1,17 @@
 import argparse
-# from dataclasses import dataclass
+import os
+from dotenv import load_dotenv
 from langchain_community.vectorstores import Chroma
-from langchain_openai import OpenAIEmbeddings
-from langchain_openai import ChatOpenAI
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
+
+# Load environment variables from .env
+load_dotenv()
+
+# Get API key from .env
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    raise ValueError("Error: OPENAI_API_KEY not found in .env file")
 
 CHROMA_PATH = "chroma"
 
@@ -26,21 +34,22 @@ def main():
     query_text = args.query_text
 
     # Prepare the DB.
-    embedding_function = OpenAIEmbeddings()
+    embedding_function = OpenAIEmbeddings(openai_api_key=api_key)
     db = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
 
     # Search the DB.
     results = db.similarity_search_with_relevance_scores(query_text, k=3)
     if len(results) == 0 or results[0][1] < 0.7:
-        print(f"Unable to find matching results.")
+        print("Unable to find matching results.")
         return
 
     context_text = "\n\n---\n\n".join([doc.page_content for doc, _score in results])
     prompt_template = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
     prompt = prompt_template.format(context=context_text, question=query_text)
+
     print(prompt)
 
-    model = ChatOpenAI()
+    model = ChatOpenAI(openai_api_key=api_key)
     response_text = model.predict(prompt)
 
     sources = [doc.metadata.get("source", None) for doc, _score in results]
